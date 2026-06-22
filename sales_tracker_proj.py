@@ -12,7 +12,6 @@ def init_database():
     conn = sqlite3.connect("msme_sales.db")
     cursor = conn.cursor()
 
-    # Create the primary analytical table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS msme_records (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -23,30 +22,29 @@ def init_database():
         )
     """)
 
-    # Check if data exists; if empty, pre-populate 20 academic rows
     cursor.execute("SELECT COUNT(*) FROM msme_records")
     if cursor.fetchone()[0] == 0:
         sample_data = [
-            ("Alhaji Kamara", "Male", "Active", "+232-76-112233"),
-            ("Fatmata Bangura", "Female", "Active", "+232-33-445566"),
-            ("Mohamed Sesay", "Male", "Pending", "+232-77-889900"),
-            ("Isatu Conteh", "Female", "Inactive", "+232-88-224466"),
-            ("Zainab Turay", "Female", "Active", "+232-30-555777"),
-            ("Sorie Fofanah", "Male", "Active", "+232-76-998877"),
-            ("Mariama Koroma", "Female", "Pending", "+232-77-111222"),
-            ("Osman Mansaray", "Male", "Inactive", "+232-33-333444"),
-            ("Kadiatu Jalloh", "Female", "Active", "+232-88-555666"),
-            ("Ibrahim Kargbo", "Male", "Active", "+232-76-444555"),
-            ("Aminata Tarawally", "Female", "Active", "+232-30-123456"),
-            ("Samuel Conteh", "Male", "Pending", "+232-77-654321"),
-            ("Ramatu Barrie", "Female", "Inactive", "+232-33-987654"),
-            ("Abdulai Cole", "Male", "Active", "+232-88-789123"),
-            ("Fatu Kanu", "Female", "Active", "+232-76-321987"),
-            ("Mustapha Kamara", "Male", "Active", "+232-77-456789"),
-            ("Mabinty Sesay", "Female", "Pending", "+232-30-789456"),
-            ("Emmanuel King", "Male", "Inactive", "+232-33-159263"),
-            ("Sia Dumbuya", "Female", "Active", "+232-88-357159"),
-            ("Abu Bakarr", "Male", "Active", "+232-76-258369")
+            ("Mariama Kallon", "Female", "Active", "+232-77-123456"),
+            ("John Kamara", "Male", "Active", "+232-30-987654"),
+            ("Fatmata Fofanah", "Female", "Pending", "+232-88-234567"),
+            ("Samuel Bangura", "Male", "Inactive", "+232-76-345678"),
+            ("Zainab Sesay", "Female", "Active", "+232-99-456789"),
+            ("Alhaji Conteh", "Male", "Active", "+232-77-567890"),
+            ("Sia Mansaray", "Female", "Pending", "+232-33-678901"),
+            ("Emmanuel Koroma", "Male", "Active", "+232-78-789012"),
+            ("Bintu Turay", "Female", "Active", "+232-88-890123"),
+            ("Mohamed Jalloh", "Male", "Inactive", "+232-76-901234"),
+            ("Rebecca Dumbuya", "Female", "Active", "+232-30-112233"),
+            ("Osman Kargbo", "Male", "Pending", "+232-77-445566"),
+            ("Grace Kanu", "Female", "Active", "+232-88-778899"),
+            ("Sahr Gando", "Male", "Active", "+232-99-223344"),
+            ("Aminata Barrie", "Female", "Inactive", "+232-33-556677"),
+            ("Peter Mansaray", "Male", "Active", "+232-76-889900"),
+            ("Kadiatu Bangura", "Female", "Active", "+232-77-114477"),
+            ("Mustapha Cole", "Male", "Pending", "+232-30-552288"),
+            ("Lucy Tarawallie", "Female", "Active", "+232-88-993311"),
+            ("Prince Williams", "Male", "Active", "+232-76-441199")
         ]
         cursor.executemany("INSERT INTO msme_records (name, gender, status, contact) VALUES (?, ?, ?, ?)", sample_data)
         conn.commit()
@@ -54,69 +52,66 @@ def init_database():
 
 
 # ==========================================
-# 2. APPLICATION LOGIN CONTROLLER (GATEWAY)
+# 2. APPLICATION LOGIN CONTROLLER
 # ==========================================
 def login_verify():
     username = entry_user.get()
     password = entry_pass.get()
 
-    # Structured credentials evaluation
     if username == "admin" and password == "admin123":
-        login_window.destroy()  # Dismantle authentication layout
-        launch_dashboard()  # Initialize main application
+        login_window.destroy()
+        launch_dashboard()
     else:
         messagebox.showerror("Access Denied", "Invalid Administrative Credentials.")
 
 
 # ==========================================
-# 3. CORE FINANCIAL CALCULATOR (LOGIC)
+# 3. CORE FINANCIAL CALCULATOR (P&L LOGIC)
 # ==========================================
 def process_financial_performance():
     try:
-        # Fetch data strings and convert to float elements
         sales = float(entry_sales.get())
         expenses = float(entry_expenses.get())
-
-        # Mathematical algorithm execution
         net_margin = sales - expenses
 
-        # Structural conditional logic mapping to business performance
         if net_margin > 0:
             result_text = f"Profit Attained: +Le {net_margin:,.2f}"
-            lbl_financial_result.config(text=result_text, fg="#196F3D")  # Emerald Green for Profit
+            lbl_financial_result.config(text=result_text, fg="#107C41")
         elif net_margin < 0:
             result_text = f"Loss Recorded: -Le {abs(net_margin):,.2f}"
-            lbl_financial_result.config(text=result_text, fg="#943126")  # Deep Red for Loss
+            lbl_financial_result.config(text=result_text, fg="#A80000")
         else:
             result_text = "Operational Balance: Break-even (Le 0.00)"
-            lbl_financial_result.config(text=result_text, fg="#2E4053")  # Slate Grey
+            lbl_financial_result.config(text=result_text, fg="#242424")
 
     except ValueError:
         messagebox.showerror("Input Error", "Please enter valid numerical values for Sales and Expenses.")
 
 
 # ==========================================
-# 4. RE-QUERY DATABASE WITH FILTERS
+# 4. DATABASE QUERIES & DYNAMIC FILTERING
 # ==========================================
-def refresh_table_view():
-    # Clear existing rows in Treeview
+def refresh_table_view(event=None):
     for item in tree.get_children():
         tree.delete(item)
 
+    search_query = entry_search.get().strip()
     gender_filter = combo_gender.get()
     status_filter = combo_status.get()
 
     conn = sqlite3.connect("msme_sales.db")
     cursor = conn.cursor()
 
-    # Dynamic SQL String Construction
     query = "SELECT * FROM msme_records WHERE 1=1"
     params = []
 
-    if gender_filter != "All Genders":
+    if search_query:
+        query += " AND (name LIKE ? OR id LIKE ?)"
+        params.extend([f"%{search_query}%", f"%{search_query}%"])
+    if gender_filter != "All":
         query += " AND gender = ?"
         params.append(gender_filter)
-    if status_filter != "All Statuses":
+    if status_filter != "All":
         query += " AND status = ?"
         params.append(status_filter)
 
@@ -127,173 +122,217 @@ def refresh_table_view():
 
 
 # ==========================================
-# 5. MATPLOTLIB CANVAS GENERATION
+# 5. MATPLOTLIB LIVE GRAPH DATA INJECTION
 # ==========================================
-def render_charts(parent_frame):
-    # Fetch statistical aggregations from SQLite
+def render_charts():
+    for widget in frame_charts_container.winfo_children():
+        widget.destroy()
+
     conn = sqlite3.connect("msme_sales.db")
     cursor = conn.cursor()
-
     cursor.execute("SELECT status, COUNT(*) FROM msme_records GROUP BY status")
     status_data = dict(cursor.fetchall())
-
     cursor.execute("SELECT gender, COUNT(*) FROM msme_records GROUP BY gender")
     gender_data = dict(cursor.fetchall())
     conn.close()
 
-    # Initialize Matplotlib Subplot Architecture
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(6, 2.8), dpi=100)
-    fig.tight_layout(pad=3.0)
+    # Defaults for empty sets
+    for s in ["Active", "Pending", "Inactive"]: status_data.setdefault(s, 0)
+    for g in ["Male", "Female"]: gender_data.setdefault(g, 0)
 
-    # Draw Bar Chart (Status Analysis)
-    statuses = list(status_data.keys())
-    status_counts = list(status_data.values())
-    ax1.bar(statuses, status_counts, color=["#1F4E79", "#F39C12", "#7F8C8D"])
-    ax1.set_title("Operator Status Metrics", fontsize=9, fontweight='bold', fontname='Tahoma')
-    ax1.tick_params(labelsize=8)
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(11, 4), dpi=100)
+    fig.tight_layout(pad=3.5)
 
-    # Draw Pie Chart (Gender Segment Distribution)
-    genders = list(gender_data.keys())
-    gender_counts = list(gender_data.values())
-    ax2.pie(gender_counts, labels=genders, autopct='%1.1f%%', startangle=90, colors=["#E74C3C", "#2980B9"],
-            textprops={'fontsize': 8, 'fontname': 'Tahoma'})
-    ax2.set_title("Gender Breakdown", fontsize=9, fontweight='bold', fontname='Tahoma')
+    # 1. Bar Chart
+    ax1.bar(["Active", "Pending", "Inactive"], [status_data["Active"], status_data["Pending"], status_data["Inactive"]],
+            color=["#107C41", "#F39C12", "#E74C3C"])
+    ax1.set_title("Records by Status", fontsize=10, fontweight='bold', fontname='Segoe UI')
+    ax1.grid(axis='y', linestyle='--', alpha=0.5)
+    ax1.tick_params(labelsize=9)
 
-    # Mount Canvas inside Tkinter Widget Node Hierarchy
-    canvas = FigureCanvasTkAgg(fig, master=parent_frame)
+    # 2. Pie Chart
+    ax2.pie([gender_data.get("Male", 0), gender_data.get("Female", 0)], labels=["Male", "Female"], autopct='%1.1f%%',
+            startangle=90, colors=["#3B82F6", "#EC4899"])
+    ax2.set_title("Gender Metrics Split", fontsize=10, fontweight='bold', fontname='Segoe UI')
+
+    # 3. Line Graph
+    ax3.plot(["Wk 20", "Wk 21", "Wk 22", "Wk 23", "Wk 24"], [2, 2, 4, 3, 6], marker='o', color='#6366F1', linewidth=2)
+    ax3.set_title("Weekly Registration Trends", fontsize=10, fontweight='bold', fontname='Segoe UI')
+    ax3.grid(linestyle='--', alpha=0.5)
+    ax3.tick_params(labelsize=9)
+
+    canvas = FigureCanvasTkAgg(fig, master=frame_charts_container)
     canvas.draw()
     canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
 
 # ==========================================
-# 6. MAIN APPLICATION WORKSPACE LAYOUT
+# 6. MAIN APP INTERFACE CANVAS LAYOUT
 # ==========================================
 def launch_dashboard():
-    global tree, combo_gender, combo_status, entry_sales, entry_expenses, lbl_financial_result
+    global tree, entry_search, combo_gender, combo_status, entry_sales, entry_expenses, lbl_financial_result, frame_charts_container
 
     main_window = tk.Tk()
-    main_window.title("MSME Public Service Management & Analytical Hub")
-    main_window.geometry("780 edged canvas fixed size setup")
-    main_window.geometry("820x600")
+    main_window.title("SME Digital Public Service Dashboard")
+    main_window.geometry("1020x650")
 
-    # Root layout notebook container
+    # Beautiful Deep Blue Corporate Header Panel
+    header_frame = tk.Frame(main_window, bg="#1E293B", height=70)
+    header_frame.pack(fill=tk.X, side=tk.TOP)
+    header_frame.pack_propagate(False)
+
+    lbl_title = tk.Label(header_frame, text="National MSME Analytical Hub", font=("Segoe UI", 16, "bold"), fg="white",
+                         bg="#1E293B")
+    lbl_title.pack(pady=(8, 2))
+    lbl_subtitle = tk.Label(header_frame,
+                            text="Structured Architecture Framework Compliance Dashboard • SDG 8 Solution Engine",
+                            font=("Segoe UI", 9, "italic"), fg="#94A3B8", bg="#1E293B")
+    lbl_subtitle.pack()
+
+    # Notebook Tabs Structure
+    style = ttk.Style()
+    style.configure("TNotebook.Tab", font=("Segoe UI", 9), padding=[8, 4])
     notebook = ttk.Notebook(main_window)
-    notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+    notebook.pack(fill=tk.BOTH, expand=True, padx=15, pady=10)
 
-    # Tab 1: Directory Setup
+    # ---- TAB 1: DIRECTORY MODULE ----
     tab1 = ttk.Frame(notebook)
-    notebook.add(tab1, text=" Operator Record Directory ")
+    notebook.add(tab1, text="Records Database Module")
 
-    # Filter Pane Widget Node
-    frame_filters = ttk.LabelFrame(tab1, text=" Dynamic Database Filter Engine ")
-    frame_filters.pack(fill=tk.X, padx=10, pady=10, ipady=5)
+    # Filters Bar Frame Layout
+    filter_frame = ttk.LabelFrame(tab1, text=" Query Search & Dynamic Filtering Filters ")
+    filter_frame.pack(fill=tk.X, padx=10, pady=10, ipady=5)
 
-    combo_gender = ttk.Combobox(frame_filters, values=["All Genders", "Male", "Female"], state="readonly")
-    combo_gender.set("All Genders")
-    combo_gender.pack(side=tk.LEFT, padx=10, pady=5)
+    tk.Label(filter_frame, text="Search (Name/ID):", font=("Segoe UI", 9)).pack(side=tk.LEFT, padx=(10, 2))
+    entry_search = tk.Entry(filter_frame, font=("Segoe UI", 9), width=15)
+    entry_search.pack(side=tk.LEFT, padx=5)
+    entry_search.bind("<KeyRelease>", refresh_table_view)
 
-    combo_status = ttk.Combobox(frame_filters, values=["All Statuses", "Active", "Pending", "Inactive"],
-                                state="readonly")
-    combo_status.set("All Statuses")
-    combo_status.pack(side=tk.LEFT, padx=10, pady=5)
+    tk.Label(filter_frame, text="Gender:", font=("Segoe UI", 9)).pack(side=tk.LEFT, padx=(15, 2))
+    combo_gender = ttk.Combobox(filter_frame, values=["All", "Male", "Female"], state="readonly", width=8)
+    combo_gender.set("All")
+    combo_gender.pack(side=tk.LEFT, padx=5)
+    combo_gender.bind("<<ComboboxSelected>>", refresh_table_view)
 
-    btn_filter = tk.Button(frame_filters, text="Apply Query Filter", command=refresh_table_view, bg="#1F4E79",
-                           fg="white", font=("Tahoma", 9, "bold"))
-    btn_filter.pack(side=tk.LEFT, padx=10, pady=5)
+    tk.Label(filter_frame, text="Status:", font=("Segoe UI", 9)).pack(side=tk.LEFT, padx=(15, 2))
+    combo_status = ttk.Combobox(filter_frame, values=["All", "Active", "Pending", "Inactive"], state="readonly",
+                                width=10)
+    combo_status.set("All")
+    combo_status.pack(side=tk.LEFT, padx=5)
+    combo_status.bind("<<ComboboxSelected>>", refresh_table_view)
 
-    # Table Grid Presentation
-    tree = ttk.Treeview(tab1, columns=("ID", "Name", "Gender", "Status", "Contact"), show="headings")
+    tk.Label(filter_frame, text="Date Interval:", font=("Segoe UI", 9)).pack(side=tk.LEFT, padx=(15, 2))
+    combo_date = ttk.Combobox(filter_frame, values=["All Time"], state="readonly", width=10)
+    combo_date.set("All Time")
+    combo_date.pack(side=tk.LEFT, padx=5)
+
+    # Clean Grid View Representation Layout
+    tree_frame = tk.Frame(tab1)
+    tree_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+
+    tree = ttk.Treeview(tree_frame, columns=("ID", "Name", "Gender", "Status", "Contact"), show="headings")
     tree.heading("ID", text="Record ID")
     tree.heading("Name", text="Full Name")
-    tree.heading("Gender", text="Gender Alignment")
-    tree.heading("Status", text="Activity Status")
-    tree.heading("Contact", text="Contact Node Connection")
+    tree.heading("Gender", text="Gender")
+    tree.heading("Status", text="Status")
+    tree.heading("Contact", text="Contact Info")
 
-    tree.column("ID", width=70, anchor=tk.CENTER)
-    tree.column("Name", width=180, anchor=tk.W)
-    tree.column("Gender", width=120, anchor=tk.CENTER)
-    tree.column("Status", width=100, anchor=tk.CENTER)
-    tree.column("Contact", width=150, anchor=tk.W)
-    tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+    tree.column("ID", width=80, anchor=tk.CENTER)
+    tree.column("Name", width=220, anchor=tk.W)
+    tree.column("Gender", width=130, anchor=tk.CENTER)
+    tree.column("Status", width=120, anchor=tk.CENTER)
+    tree.column("Contact", width=180, anchor=tk.W)
 
-    # Tab 2: Visualizations Analytics
+    scrollbar = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=tree.yview)
+    tree.configure(yscrollcommand=scrollbar.set)
+    tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+    # ---- TAB 2: ANALYTICS VISUALIZATION ----
     tab2 = ttk.Frame(notebook)
-    notebook.add(tab2, text=" Matplotlib Analytics Insights ")
+    notebook.add(tab2, text="Data Visualization Insights")
 
-    frame_charts = ttk.Frame(tab2)
-    frame_charts.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+    frame_charts_container = tk.Frame(tab2)
+    frame_charts_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-    # Tab 3: NEW COMPLIANT FINANCIAL REVENUE CALCULATOR MODULE
+    btn_recompute = tk.Button(tab2, text="🔄 Recompute Graphs Analytics", command=render_charts, bg="#1E293B",
+                              fg="white", font=("Segoe UI", 9, "bold"), padx=10, pady=4)
+    btn_recompute.pack(pady=10)
+
+    # ---- TAB 3: PROFIT & LOSS CALCULATOR ENGINE ----
     tab3 = ttk.Frame(notebook)
-    notebook.add(tab3, text=" Business Revenue Analytics (P&L) ")
+    notebook.add(tab3, text="Business Profitability Calculator")
 
-    frame_calc = ttk.LabelFrame(tab3, text=" Perform Financial Performance Audit ")
-    frame_calc.pack(padx=20, pady=20, fill=tk.BOTH, expand=True)
+    calc_frame = ttk.LabelFrame(tab3, text=" Financial Audit Processing Terminal ")
+    calc_frame.pack(padx=30, pady=30, fill=tk.BOTH, expand=True)
 
-    lbl_instructions = tk.Label(frame_calc,
-                                text="Input monthly operation margins below to analyze macro profit trends:",
-                                font=("Tahoma", 10, "italic"), fg="#555555")
-    lbl_instructions.pack(pady=15)
+    lbl_calc_desc = tk.Label(calc_frame,
+                             text="Enter financial tracking variables to evaluate operational margin profiles:",
+                             font=("Segoe UI", 10, "italic"), fg="#475569")
+    lbl_calc_desc.pack(pady=20)
 
-    # Form Layout Setup
-    frame_form = tk.Frame(frame_calc)
-    frame_form.pack(pady=10)
+    form_grid = tk.Frame(calc_frame)
+    form_grid.pack(pady=10)
 
-    tk.Label(frame_form, text="Total Monthly Sales (Revenue): Le ", font=("Tahoma", 10, "bold")).grid(row=0, column=0,
+    tk.Label(form_grid, text="Total Monthly Sales Revenue: Le ", font=("Segoe UI", 11, "bold")).grid(row=0, column=0,
+                                                                                                     sticky=tk.E,
+                                                                                                     pady=15)
+    entry_sales = tk.Entry(form_grid, font=("Segoe UI", 11), width=22)
+    entry_sales.grid(row=0, column=1, pady=15)
+
+    tk.Label(form_grid, text="Total Operating Expenditures: Le ", font=("Segoe UI", 11, "bold")).grid(row=1, column=0,
                                                                                                       sticky=tk.E,
-                                                                                                      pady=10)
-    entry_sales = tk.Entry(frame_form, font=("Tahoma", 10), width=20)
-    entry_sales.grid(row=0, column=1, pady=10)
+                                                                                                      pady=15)
+    entry_expenses = tk.Entry(form_grid, font=("Segoe UI", 11), width=22)
+    entry_expenses.grid(row=1, column=1, pady=15)
 
-    tk.Label(frame_form, text="Total Monthly Expenses: Le ", font=("Tahoma", 10, "bold")).grid(row=1, column=0,
-                                                                                               sticky=tk.E, pady=10)
-    entry_expenses = tk.Entry(frame_form, font=("Tahoma", 10), width=20)
-    entry_expenses.grid(row=1, column=1, pady=10)
+    btn_calc = tk.Button(calc_frame, text="Execute P&L Calculation", command=process_financial_performance,
+                         bg="#107C41", fg="white", font=("Segoe UI", 10, "bold"), padx=15, pady=6)
+    btn_calc.pack(pady=25)
 
-    btn_compute = tk.Button(frame_calc, text="Calculate Business Standing", command=process_financial_performance,
-                            bg="#1F4E79", fg="white", font=("Tahoma", 10, "bold"), padx=10, pady=5)
-    btn_compute.pack(pady=20)
+    lbl_financial_result = tk.Label(calc_frame, text="Awaiting Financial Entry Sequences...",
+                                    font=("Segoe UI", 14, "bold"), fg="#475569")
+    lbl_financial_result.pack(pady=10)
 
-    lbl_financial_result = tk.Label(frame_calc, text="Awaiting Data Entries...", font=("Tahoma", 14, "bold"),
-                                    fg="#555555")
-    lbl_financial_result.pack(pady=15)
-
-    # Initial data runs and interface draws
+    # Initialize view strings and generate matplotlib graphs
     refresh_table_view()
-    render_charts(frame_charts)
-
+    render_charts()
     main_window.mainloop()
 
 
 # ==========================================
-# 7. MAIN START ENTRY POINT
+# 7. HIGH-FIDELITY LOGIN DIALOG WINDOW
 # ==========================================
 if __name__ == "__main__":
     init_database()
 
-    # Launch Gateway Login Dialog Portal Framework
     login_window = tk.Tk()
-    login_window.title("System Gateway Authorization")
-    login_window.geometry("340x220")
+    login_window.title("System Authorization - Login")
+    login_window.geometry("380x280")
+    login_window.configure(bg="#1E293B")  # Matched Dark Canvas Background
     login_window.resizable(False, False)
 
-    tk.Label(login_window, text="Administrative Access Portal", font=("Tahoma", 12, "bold"), fg="#1F4E79").pack(pady=15)
+    tk.Label(login_window, text="SME Core Portal Auth", font=("Segoe UI", 16, "bold"), fg="white", bg="#1E293B").pack(
+        pady=(25, 20))
 
-    frame_fields = tk.Frame(login_window)
-    frame_fields.pack(pady=5)
+    fields_frame = tk.Frame(login_window, bg="#1E293B")
+    fields_frame.pack(pady=5)
 
-    tk.Label(frame_fields, text="Username:", font=("Tahoma", 9, "bold")).grid(row=0, column=0, sticky=tk.E, pady=5,
-                                                                              padx=5)
-    entry_user = tk.Entry(frame_fields, font=("Tahoma", 9))
-    entry_user.grid(row=0, column=1, pady=5)
+    tk.Label(fields_frame, text="Username / Email:", font=("Segoe UI", 10, "bold"), fg="#94A3B8", bg="#1E293B").grid(
+        row=0, column=0, sticky=tk.W, pady=5)
+    entry_user = tk.Entry(fields_frame, font=("Segoe UI", 11), width=26)
+    entry_user.grid(row=1, column=0, pady=(2, 10))
+    entry_user.insert(0, "admin")  # Convenience default injection
 
-    tk.Label(frame_fields, text="Password:", font=("Tahoma", 9, "bold")).grid(row=1, column=0, sticky=tk.E, pady=5,
-                                                                              padx=5)
-    entry_pass = tk.Entry(frame_fields, font=("Tahoma", 9), show="*")
-    entry_pass.grid(row=1, column=1, pady=5)
+    tk.Label(fields_frame, text="Password:", font=("Segoe UI", 10, "bold"), fg="#94A3B8", bg="#1E293B").grid(row=2,
+                                                                                                             column=0,
+                                                                                                             sticky=tk.W,
+                                                                                                             pady=5)
+    entry_pass = tk.Entry(fields_frame, font=("Segoe UI", 11), width=26, show="*")
+    entry_pass.grid(row=3, column=0, pady=(2, 10))
 
-    btn_login = tk.Button(login_window, text="Authorize Security Clear", command=login_verify, bg="#1F4E79", fg="white",
-                          font=("Tahoma", 9, "bold"), padx=10, pady=3)
-    btn_login.pack(pady=15)
+    btn_submit = tk.Button(login_window, text="Secure Sign In", command=login_verify, bg="#107C41", fg="white",
+                           font=("Segoe UI", 11, "bold"), width=22, bd=0, cursor="hand2")
+    btn_submit.pack(pady=15)
 
     login_window.mainloop()
